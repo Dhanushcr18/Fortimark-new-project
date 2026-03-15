@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 720" fill="none">
+  <defs>
+    <linearGradient id="fuse" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f5f7ff"/>
+      <stop offset="0.55" stop-color="#b7bfcc"/>
+      <stop offset="1" stop-color="#6d7481"/>
+    </linearGradient>
+    <linearGradient id="arm" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#9ea8b8"/>
+      <stop offset="1" stop-color="#4b5362"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(670 360) rotate(90) scale(120 340)">
+      <stop stop-color="#ff00ff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#00ffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <ellipse cx="680" cy="360" rx="330" ry="120" fill="url(#glow)"/>
+
+  <g opacity="0.98">
+    <path d="M455 395C430 365 440 325 482 300L624 212C656 192 706 188 740 203L845 250C870 260 888 282 894 306L905 350C909 365 905 381 892 392L812 462C787 485 742 503 704 505L593 510C552 512 513 498 491 470L455 395Z" fill="url(#fuse)"/>
+
+    <path d="M610 282L690 256C710 249 737 252 754 264L806 300C818 308 823 322 819 336L803 390C798 406 781 420 760 424L679 437C654 441 624 435 606 423L546 383C530 372 522 354 525 337L535 304C538 293 550 284 565 282H610Z" fill="#1f2530"/>
+
+    <path d="M551 355L620 317C641 306 672 309 689 324L719 350C729 359 729 373 719 381L665 425C648 438 619 438 599 428L550 405C533 397 526 381 531 366L551 355Z" fill="#cfd6e4"/>
+
+    <circle cx="664" cy="360" r="19" fill="#ff1d7a"/>
+
+    <path d="M610 448H671L657 502H623L610 448Z" fill="#626c7d"/>
+    <path d="M631 502H649L662 565H618L631 502Z" fill="#515a6a"/>
+
+    <path d="M463 330L390 265" stroke="url(#arm)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M500 430L404 483" stroke="url(#arm)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M842 280L971 216" stroke="url(#arm)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M871 382L1029 441" stroke="url(#arm)" stroke-width="14" stroke-linecap="round"/>
+
+    <path d="M780 228L915 175" stroke="#3d4452" stroke-width="10" stroke-linecap="round"/>
+    <path d="M812 250L951 196" stroke="#3d4452" stroke-width="10" stroke-linecap="round"/>
+
+    <g stroke="#e9edf5" stroke-width="8" stroke-linecap="round">
+      <g transform="translate(360 240)">
+        <circle cx="0" cy="0" r="45"/>
+        <line x1="-63" y1="0" x2="63" y2="0"/>
+        <line x1="0" y1="-63" x2="0" y2="63"/>
+        <line x1="-44" y1="-44" x2="44" y2="44"/>
+        <line x1="44" y1="-44" x2="-44" y2="44"/>
+      </g>
+      <g transform="translate(390 520)">
+        <circle cx="0" cy="0" r="45"/>
+        <line x1="-63" y1="0" x2="63" y2="0"/>
+        <line x1="0" y1="-63" x2="0" y2="63"/>
+        <line x1="-44" y1="-44" x2="44" y2="44"/>
+        <line x1="44" y1="-44" x2="-44" y2="44"/>
+      </g>
+      <g transform="translate(975 200)">
+        <circle cx="0" cy="0" r="48"/>
+        <line x1="-68" y1="0" x2="68" y2="0"/>
+        <line x1="0" y1="-68" x2="0" y2="68"/>
+        <line x1="-48" y1="-48" x2="48" y2="48"/>
+        <line x1="48" y1="-48" x2="-48" y2="48"/>
+      </g>
+      <g transform="translate(1060 470)">
+        <circle cx="0" cy="0" r="48"/>
+        <line x1="-68" y1="0" x2="68" y2="0"/>
+        <line x1="0" y1="-68" x2="0" y2="68"/>
+        <line x1="-48" y1="-48" x2="48" y2="48"/>
+        <line x1="48" y1="-48" x2="-48" y2="48"/>
+      </g>
+    </g>
+  </g>
+</svg>

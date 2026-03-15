@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  background-color: #050505;
+  color: #fafafa;
+}
+
+html {
+  scrollbar-width: none;
+  background: #050505;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+main {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #050505;
+  color: #fafafa;
+  letter-spacing: 0.02em;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+canvas {
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: white;
+  color: black;
+}
