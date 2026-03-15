@@ -90,7 +90,8 @@ export function ModelStage() {
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0) { // Left mouse button only
+      if (e.button === 0) {
+        // Left mouse button only
         dragStateRef.current.isDragging = true
         dragStateRef.current.currentY = e.clientY
       }
@@ -125,10 +126,14 @@ export function ModelStage() {
   return (
     <div ref={canvasRef} style={{ width: '100%', height: '100%' }}>
       <Canvas
-        shadows
+        shadows={false}
+        dpr={[1, 1]}
         camera={{ position: [0, 0.12, 4.2], fov: 38 }}
         style={{ width: '100%', height: '100%' }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          gl.setPixelRatio(1)
+        }}
       >
         <PerspectiveCamera makeDefault position={[0, 0.12, 4.2]} fov={38} />
 
@@ -137,9 +142,6 @@ export function ModelStage() {
         <directionalLight
           position={[4, 5, 2]}
           intensity={2.8}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
         />
 
         {/* Blue accent light */}
@@ -154,12 +156,11 @@ export function ModelStage() {
           angle={0.32}
           intensity={28}
           color="#b7e6ff"
-          castShadow
         />
 
         <group>
           <JeskoModel dragState={dragStateRef} />
-      </group>
+        </group>
 
         <ContactShadows position={[0, -1.55, 0]} scale={8.8} opacity={0.45} blur={3} />
 

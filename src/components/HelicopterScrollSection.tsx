@@ -1,250 +1,349 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import * as THREE_API from 'three'
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { PerspectiveCamera, useGLTF } from '@react-three/drei'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { Box3, Group, MathUtils, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 
 gsap.registerPlugin(ScrollTrigger)
 
-export function HelicopterScrollSection() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+interface FlightState {
+  progress: number
+  bank: number
+  heading: number
+}
 
-  useEffect(() => {
-    if (!canvasRef.current || !containerRef.current) return
+interface FlightStep {
+  label: string
+  title: string
+  body: string
+}
 
-    // Dynamic import to handle Next.js SSR  
-    import('three').then((ThreeModule) => {
-      const THREE = ThreeModule as typeof THREE_API
+const FLIGHT_POINTS = [
+  new Vector3(4.2, 2.1, -3.6),
+  new Vector3(2.4, 1.3, -1.8),
+  new Vector3(0.8, 0.6, -0.3),
+  new Vector3(-1.2, -0.2, 1.4),
+  new Vector3(-3.6, -1.1, 3.8),
+]
 
-      // Scene setup
-      const scene = new THREE.Scene()
-      scene.background = new THREE.Color(0x0a0a0a)
-      scene.fog = new THREE.Fog(0x0a0a0a, 150, 500)
+const FLIGHT_STEPS: FlightStep[] = [
+  {
+    label: '01',
+    title: 'Ignition Online',
+    body: 'Systems check complete. Entering the controlled flight corridor at stable altitude.',
+  },
+  {
+    label: '02',
+    title: 'Urban Routing',
+    body: 'Crosswind correction active with smooth bank control for dense city navigation.',
+  },
+  {
+    label: '03',
+    title: 'Mid Transit',
+    body: 'Glide mode engaged as the flight computer balances lift, speed, and passenger comfort.',
+  },
+  {
+    label: '04',
+    title: 'Landing Readiness',
+    body: 'Descent vector aligned and heading locked for a clean approach toward the left exit.',
+  },
+  {
+    label: '05',
+    title: 'Mission Complete',
+    body: 'Final path completed. Aircraft exits the corridor after full sequence confirmation.',
+  },
+]
 
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000
-      )
-      camera.position.set(0, 5, 15)
-      camera.lookAt(0, 0, 0)
+const RIGHT_SIDE_STEPS = new Set([2, 4])
 
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        canvas: canvasRef.current!,
-        antialias: true,
-        alpha: false,
-      })
-      renderer.setSize(window.innerWidth, window.innerHeight)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-      renderer.shadowMap.enabled = true
-      renderer.shadowMap.type = THREE.PCFShadowMap
+class HelicopterCanvasErrorBoundary extends Component<
+  { children: React.ReactNode; fallback: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; fallback: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
 
-      // Lighting - Cyberpunk theme
-      const keyLight = new THREE.DirectionalLight(0xff00ff, 1.5)
-      keyLight.position.set(10, 15, 10)
-      keyLight.castShadow = true
-      keyLight.shadow.mapSize.width = 2048
-      keyLight.shadow.mapSize.height = 2048
-      scene.add(keyLight)
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
 
-      const rimLight = new THREE.DirectionalLight(0xaa00ff, 1.2)
-      rimLight.position.set(-15, 10, -10)
-      scene.add(rimLight)
+  componentDidCatch(error: unknown) {
+    console.error('Helicopter canvas failed, rendering fallback.', error)
+  }
 
-      const fillLight = new THREE.DirectionalLight(0x00ffff, 0.6)
-      fillLight.position.set(-10, 5, 15)
-      scene.add(fillLight)
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback
+    }
 
-      const ambientLight = new THREE.AmbientLight(0x1a1a2e, 0.8)
-      scene.add(ambientLight)
+    return this.props.children
+  }
+}
 
-      // Grid floor
-      const gridHelper = new THREE.GridHelper(30, 30, 0xff00ff, 0x3d0040)
-      gridHelper.position.y = -5
-      ;(gridHelper.material as any).transparent = true
-      ;(gridHelper.material as any).opacity = 0.15
-      scene.add(gridHelper)
+function HelicopterModel({
+  flightStateRef,
+  modelRef,
+  onLoaded,
+}: {
+  flightStateRef: React.MutableRefObject<FlightState>
+  modelRef: React.MutableRefObject<Group | null>
+  onLoaded: () => void
+}) {
+  const rootRef = useRef<Group>(null)
+  const rotorMeshesRef = useRef<Mesh[]>([])
+  const { scene } = useGLTF('/models/helicopter-scroll.glb')
 
-      // Ground plane
-      const groundGeometry = new THREE.PlaneGeometry(100, 100)
-      const groundMaterial = new THREE.MeshStandardMaterial({
-        color: 0x0d0d1a,
-        metalness: 0.3,
-        roughness: 0.8,
-      })
-      const ground = new THREE.Mesh(groundGeometry, groundMaterial)
-      ground.rotation.x = -Math.PI / 2
-      ground.position.y = -5
-      ground.receiveShadow = true
-      scene.add(ground)
-
-      // Scanner beam
-      const beamGeometry = new THREE.BufferGeometry()
-      const beamPositions = new Float32Array([-50, 0, 0, 50, 0, 0])
-      beamGeometry.setAttribute('position', new THREE.BufferAttribute(beamPositions, 3))
-      const beamMaterial = new THREE.LineBasicMaterial({
-        color: 0xff00ff,
-        transparent: true,
-        opacity: 0.6,
-      })
-      const beamLine = new THREE.Line(beamGeometry, beamMaterial)
-      beamLine.position.z = -5
-      scene.add(beamLine)
-
-      // Floating elements
-      const floatingElements: any[] = []
-      for (let i = 0; i < 8; i++) {
-        const geometry = new THREE.IcosahedronGeometry(0.3, 2)
-        const material = new THREE.MeshStandardMaterial({
-          color: i % 2 === 0 ? 0xff00ff : 0x00ffff,
-          emissive: i % 2 === 0 ? 0xff00ff : 0x00ffff,
-          emissiveIntensity: 0.8,
-        })
-        const mesh = new THREE.Mesh(geometry, material)
-        mesh.position.set(
-          (Math.random() - 0.5) * 60,
-          (Math.random() - 0.5) * 30 + 5,
-          (Math.random() - 0.5) * 40 - 20
-        )
-        floatingElements.push(mesh)
-        scene.add(mesh)
-      }
-
-      // Helicopter model (box + rotor)
-      const helicopterGeometry = new THREE.BoxGeometry(2, 1, 3)
-      const helicopterMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a3a,
-        metalness: 0.95,
-        roughness: 0.2,
-        emissive: 0xff00ff,
-        emissiveIntensity: 0.5,
-      })
-      const helicopter = new THREE.Mesh(helicopterGeometry, helicopterMaterial)
-      helicopter.castShadow = true
-      helicopter.receiveShadow = true
-      
-      const helicopterGroup = new THREE.Group()
-      helicopterGroup.add(helicopter)
-
-      // Rotor
-      const rotorGeometry = new THREE.BoxGeometry(3, 0.1, 0.5)
-      const rotorMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff00ff,
-        metalness: 0.9,
-        emissive: 0xff00ff,
-        emissiveIntensity: 0.4,
-      })
-      const rotor = new THREE.Mesh(rotorGeometry, rotorMaterial)
-      rotor.position.y = 0.8
-      rotor.castShadow = true
-      helicopterGroup.add(rotor)
-
-      scene.add(helicopterGroup)
-
-      // Spline path
-      const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 0, 30),
-        new THREE.Vector3(15, 8, 15),
-        new THREE.Vector3(20, 12, 0),
-        new THREE.Vector3(15, 10, -15),
-        new THREE.Vector3(0, 5, -20),
-        new THREE.Vector3(-15, 8, -15),
-        new THREE.Vector3(-20, 12, 0),
-        new THREE.Vector3(-15, 10, 15),
-        new THREE.Vector3(0, 0, 30),
-      ])
-
-      // GSAP ScrollTrigger animation
-      const proxy = { scrollProgress: 0 }
-      gsap.to(proxy, {
-        scrollProgress: 1,
-        scrollTrigger: {
-          trigger: containerRef.current!,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: 1,
-        },
-        onUpdate: () => {
-          const point = curve.getPoint(proxy.scrollProgress)
-          helicopterGroup.position.copy(point)
-
-          const nextProgress = Math.min(proxy.scrollProgress + 0.01, 1)
-          const nextPoint = curve.getPoint(nextProgress)
-          const direction = new THREE.Vector3()
-            .subVectors(nextPoint, point)
-            .normalize()
-
-          const angle = Math.atan2(direction.x, direction.z)
-          helicopterGroup.rotation.y = angle
-          helicopterGroup.rotation.z = Math.sin(proxy.scrollProgress * Math.PI * 2) * 0.3
-        },
-      })
-
-      // Animation loop
-      const animate = () => {
-        requestAnimationFrame(animate)
-
-        rotor.rotation.z += 0.15
-
-        floatingElements.forEach((el, i) => {
-          el.rotation.x += 0.002
-          el.rotation.y += 0.004
-          el.position.y += Math.sin((Date.now() * 0.001 + i) * 0.5) * 0.01
-        })
-
-        beamLine.rotation.z += 0.008
-        ;(beamMaterial as any).opacity = Math.sin(Date.now() * 0.003) * 0.3 + 0.5
-
-        camera.position.x = Math.sin(Date.now() * 0.0003) * 2
-        camera.position.z = 15 + Math.cos(Date.now() * 0.0002) * 1
-
-        renderer.render(scene, camera)
-      }
-      animate()
-
-      const handleResize = () => {
-        const width = window.innerWidth
-        const height = window.innerHeight
-        camera.aspect = width / height
-        camera.updateProjectionMatrix()
-        renderer.setSize(width, height)
-      }
-      window.addEventListener('resize', handleResize)
-
-      return () => {
-        window.removeEventListener('resize', handleResize)
-        renderer.dispose()
+  const model = useMemo(() => {
+    const cloned = scene.clone(true)
+    cloned.traverse((child) => {
+      if (!(child instanceof Mesh)) return
+      child.castShadow = false
+      child.receiveShadow = false
+      if (child.material instanceof MeshStandardMaterial) {
+        child.material.metalness = Math.min(child.material.metalness, 0.45)
+        child.material.roughness = Math.max(child.material.roughness, 0.55)
+        child.material.envMapIntensity = 0.6
       }
     })
-  }, [containerRef])
+    return cloned
+  }, [scene])
+
+  useEffect(() => {
+    if (!rootRef.current) return
+
+    const box = new Box3().setFromObject(model)
+    const center = box.getCenter(new Vector3())
+    const size = box.getSize(new Vector3())
+    const maxDimension = Math.max(size.x, size.y, size.z, 0.001)
+    const scale = 2.6 / maxDimension
+
+    model.position.sub(center)
+    model.scale.setScalar(scale)
+    model.position.y += size.y * scale * 0.1
+
+    const rotorMeshes: Mesh[] = []
+    model.traverse((child) => {
+      if (child instanceof Mesh && child.name.toLowerCase().includes('rotor')) {
+        rotorMeshes.push(child)
+      }
+    })
+    rotorMeshesRef.current = rotorMeshes
+
+    rootRef.current.add(model)
+    modelRef.current = rootRef.current
+    onLoaded()
+
+    return () => {
+      rotorMeshesRef.current = []
+      modelRef.current = null
+      rootRef.current?.remove(model)
+    }
+  }, [model, modelRef, onLoaded])
+
+  useFrame((state) => {
+    const root = rootRef.current
+    if (!root) return
+
+    const elapsed = state.clock.getElapsedTime()
+    const { progress, bank, heading } = flightStateRef.current
+
+    root.rotation.z = MathUtils.lerp(root.rotation.z, bank, 0.1)
+    root.rotation.x = MathUtils.lerp(root.rotation.x, Math.sin(elapsed * 0.9) * 0.08, 0.08)
+    root.rotation.y = MathUtils.lerp(root.rotation.y, heading, 0.12)
+
+    rotorMeshesRef.current.forEach((mesh) => {
+      mesh.rotation.y += 0.72
+    })
+  })
+
+  return <group ref={rootRef} />
+}
+
+export function HelicopterScrollSection() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const pinnedRef = useRef<HTMLDivElement>(null)
+  const modelRef = useRef<Group | null>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+  const activeIndexRef = useRef(0)
+  const flightStateRef = useRef<FlightState>({ progress: 0, bank: 0, heading: 0 })
+
+  const [loaded, setLoaded] = useState(false)
+  const [activeStepIndex, setActiveStepIndex] = useState(0)
+  const canRender3D = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+      return !!gl
+    } catch {
+      return false
+    }
+  }, [])
+
+  useEffect(() => {
+    const section = sectionRef.current
+    const pinned = pinnedRef.current
+    if (!section || !pinned) return
+
+    if (modelRef.current) {
+      modelRef.current.position.copy(FLIGHT_POINTS[0])
+    }
+
+    const trigger = ScrollTrigger.create({
+      trigger: section,
+      start: 'top top',
+      end: '+=4600',
+      scrub: 0.9,
+      pin: pinned,
+      pinSpacing: true,
+      invalidateOnRefresh: true,
+      onUpdate: ({ progress }) => {
+        flightStateRef.current.progress = progress
+
+        const t = progress * (FLIGHT_POINTS.length - 1)
+        const i = Math.floor(t)
+        const j = Math.min(i + 1, FLIGHT_POINTS.length - 1)
+        const localT = t - i
+
+        const current = FLIGHT_POINTS[i].clone().lerp(FLIGHT_POINTS[j], localT)
+        const direction = FLIGHT_POINTS[j].clone().sub(FLIGHT_POINTS[i]).normalize()
+
+        if (modelRef.current) {
+          modelRef.current.position.copy(current)
+        }
+
+        flightStateRef.current.bank = Math.sin(progress * Math.PI) * 0.34
+        flightStateRef.current.heading = Math.atan2(direction.x, direction.z)
+
+        const nextIndex = Math.min(
+          FLIGHT_STEPS.length - 1,
+          Math.floor(progress * FLIGHT_STEPS.length)
+        )
+        if (nextIndex !== activeIndexRef.current) {
+          activeIndexRef.current = nextIndex
+          gsap.to(textRef.current, {
+            opacity: 0,
+            y: 8,
+            duration: 0.16,
+            onComplete: () => {
+              setActiveStepIndex(nextIndex)
+              gsap.to(textRef.current, { opacity: 1, y: 0, duration: 0.2 })
+            },
+          })
+        }
+      },
+    })
+
+    return () => {
+      trigger.kill()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loaded || !modelRef.current) return
+    modelRef.current.position.copy(FLIGHT_POINTS[0])
+  }, [loaded])
 
   return (
-    <section
-      ref={containerRef}
-      className="relative h-[600vh] w-full overflow-hidden bg-gradient-to-b from-[#0a0015] to-[#050505]"
-    >
-      <div className="sticky top-0 h-screen w-full">
-        <canvas
-          ref={canvasRef}
-          className="block w-full h-full"
-        />
-        {/* Overlay gradient with neon */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0a0015]/20 via-transparent to-[#0a0015]/40" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ff00ff]/5 via-transparent to-[#00ffff]/5" />
-        
-        {/* Section label */}
-        <div className="pointer-events-none absolute top-12 left-12 text-[#00ffff]/60">
-          <p className="text-xs tracking-[0.2em] uppercase">Scroll to animate</p>
-          <h3 className="text-2xl font-thin tracking-[0.1em] mt-2 text-[#ff00ff]" style={{ textShadow: '0 0 20px rgba(255, 0, 255, 0.5)' }}>Helicopter Flight Path</h3>
+    <section ref={sectionRef} className="relative h-screen w-full overflow-hidden bg-[#03060d]">
+      <div ref={pinnedRef} className="h-screen w-full overflow-hidden">
+        {canRender3D ? (
+          <HelicopterCanvasErrorBoundary
+            fallback={<div className="h-full w-full bg-[#03060d]" />}
+          >
+            <Canvas
+              dpr={[1, 1]}
+              gl={{ antialias: false, alpha: true, powerPreference: 'high-performance' }}
+              className="h-full w-full"
+              onCreated={({ gl }) => {
+                gl.setPixelRatio(1)
+                gl.setClearColor(0x03060d, 1)
+              }}
+            >
+              <PerspectiveCamera makeDefault position={[0, 0.35, 8.2]} fov={37} />
+              <fog attach="fog" args={['#03060d', 7, 26]} />
+
+              <ambientLight intensity={0.72} color="#dde7ff" />
+              <directionalLight position={[6, 7, 5]} intensity={1.2} color="#f1f4ff" />
+              <pointLight position={[-6, 1.5, 7]} intensity={4.5} distance={18} color="#58a9ff" />
+
+              <mesh position={[0, -2.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[22, 22]} />
+                <meshBasicMaterial color="#07101e" transparent opacity={0.78} />
+              </mesh>
+
+              <Suspense fallback={null}>
+                <HelicopterModel
+                  flightStateRef={flightStateRef}
+                  modelRef={modelRef}
+                  onLoaded={() => setLoaded(true)}
+                />
+              </Suspense>
+            </Canvas>
+          </HelicopterCanvasErrorBoundary>
+        ) : (
+          <div className="h-full w-full bg-[#03060d]" />
+        )}
+
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_28%,rgba(2,6,13,0.3)_68%,rgba(2,6,13,0.86)_100%)]" />
+
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-8 md:p-12">
+          <div className="max-w-xl">
+            <p className="text-xs uppercase tracking-[0.55em] text-[#8fc4ff]/75">3D Flight Sequence</p>
+            <h2 className="mt-5 text-5xl font-semibold uppercase tracking-[0.18em] text-white md:text-7xl">
+              Helicopter
+            </h2>
+          </div>
+
+          <div
+            className={`flex ${RIGHT_SIDE_STEPS.has(activeStepIndex) ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              ref={textRef}
+              className="w-full max-w-xl rounded-[1.65rem] border border-white/14 bg-black/35 p-6 backdrop-blur-md md:p-8"
+            >
+              <p className="mb-6 text-[0.68rem] uppercase tracking-[0.75em] text-white/42">
+                Worldwide Access
+              </p>
+              <div className="border-l border-white/18 pl-5">
+                <p className="mb-2 text-[0.66rem] uppercase tracking-[0.62em] text-white/38">
+                  {FLIGHT_STEPS[activeStepIndex].label}
+                </p>
+                <h3 className="text-2xl font-semibold uppercase tracking-[0.08em] text-white md:text-3xl">
+                  {FLIGHT_STEPS[activeStepIndex].title}
+                </h3>
+                <p className="mt-3 text-sm leading-7 tracking-[0.12em] text-white/66 md:text-base">
+                  {FLIGHT_STEPS[activeStepIndex].body}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-white/10 pt-5">
+            <p className="text-[10px] uppercase tracking-[0.45em] text-white/34">
+              Altitude {Math.round((1 - flightStateRef.current.progress) * 1000)}m
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.45em] text-white/34">
+              {(flightStateRef.current.progress * 100).toFixed(0)}% complete
+            </p>
+          </div>
         </div>
+
+        {!loaded ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#02040a]">
+            <span className="animate-pulse text-sm uppercase tracking-[0.45em] text-white/70">
+              Initializing
+            </span>
+          </div>
+        ) : null}
       </div>
     </section>
   )
 }
 
-
+useGLTF.preload('/models/helicopter-scroll.glb')

@@ -9,8 +9,8 @@ const ModelStage = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="h-20 w-20 rounded-full border border-white/20 bg-[radial-gradient(circle,rgba(255,255,255,0.18),rgba(255,255,255,0.04)_58%,transparent_74%)]" />
+      <div className="flex h-full w-full items-center justify-center bg-black">
+        <div className="h-20 w-20 rounded-full border border-white/20 bg-[radial-gradient(circle,rgba(255,255,255,0.18),rgba(255,255,255,0.04)_58%,transparent_74%)] animate-pulse" />
       </div>
     ),
   }
@@ -78,7 +78,7 @@ export function ImmersiveShowcaseSection() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_42%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_26%,transparent_74%,rgba(255,255,255,0.04))]" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-12rem)] max-w-7xl flex-col justify-center gap-10">
+      <div className="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-[92rem] flex-col justify-center gap-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -102,7 +102,7 @@ export function ImmersiveShowcaseSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.9, delay: 0.08 }}
-          className="relative h-[60vh] min-h-[520px] overflow-hidden rounded-[2rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[0_40px_140px_rgba(0,0,0,0.55)]"
+          className="relative h-[74vh] min-h-[640px] overflow-hidden rounded-[2rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[0_40px_140px_rgba(0,0,0,0.55)]"
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12),transparent_54%)]" />
